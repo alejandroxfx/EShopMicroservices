@@ -16,7 +16,7 @@ builder.Services.AddValidatorsFromAssembly(assembly);
 
 builder.Services.AddCarter();
 
-var postgresDbConn = builder.Configuration.GetConnectionString("CatalogDatabase");
+var postgresDbConn = builder.Configuration.GetConnectionString("Database");
 builder.Services.AddMarten(opts=> {
     
     opts.Connection(postgresDbConn!);
