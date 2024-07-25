@@ -1,3 +1,6 @@
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+
 var builder = WebApplication.CreateBuilder(args);
 
 var assembly = typeof(Program).Assembly;
@@ -13,18 +16,27 @@ builder.Services.AddValidatorsFromAssembly(assembly);
 
 builder.Services.AddCarter();
 
+var postgresDbConn = builder.Configuration.GetConnectionString("CatalogDatabase");
 builder.Services.AddMarten(opts=> {
-    var postgresCatalogDbConnection = builder.Configuration.GetConnectionString("CatalogDatabase");
-    opts.Connection(postgresCatalogDbConnection!);
+    
+    opts.Connection(postgresDbConn!);
 }).UseLightweightSessions();
 
+if (builder.Environment.IsDevelopment())
+    builder.Services.InitializeMartenWith<CatalogInitialData>();
+
+
 builder.Services.AddExceptionHandler<CustomExceptionHandler>();
+
+builder.Services.AddHealthChecks().AddNpgSql(postgresDbConn!);
 
 var app = builder.Build();
 
 app.MapCarter();
 
 app.UseExceptionHandler(options => { });
+
+
 
 app.UseExceptionHandler(exceptionHandlerApp =>
 {
@@ -53,5 +65,10 @@ app.UseExceptionHandler(exceptionHandlerApp =>
 });
 
 app.MapGet("/", () => "Catalog.API is running");
+
+app.UseHealthChecks("/health", 
+    new HealthCheckOptions { 
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
 
 app.Run();
